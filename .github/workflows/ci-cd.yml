@@ -1,16 +1,292 @@
 name: CI/CD Platform Pipeline
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggered on every push / PR to trunk and on manual dispatch.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [trunk]
   push:
     branches: [trunk]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
 
-      - name: Test workflow
-        run: echo "Workflow is valid"
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 1 – Service builds (run in parallel)
+# Java 26 is used throughout to match the compiler release targets declared in
+# each service pom.xml (auth=26, others=25) and the per-service build workflows.
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  auth-java-ci:
+    name: Auth Service – Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Build and verify
+        run: mvn -B -ntp clean verify
+
+  booking-java-ci:
+    name: Booking Service – Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Build and verify
+        run: mvn -B -ntp clean verify
+
+  room-java-ci:
+    name: Room Service – Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: room
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Build and verify
+        run: mvn -B -ntp clean verify
+
+  branding-java-ci:
+    name: Branding Service – Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: branding
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Build and verify
+        run: mvn -B -ntp clean verify
+
+  message-java-ci:
+    name: Message Service – Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: message
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Build and verify
+        run: mvn -B -ntp clean verify
+
+  report-java-ci:
+    name: Report Service – Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: report
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Build and verify
+        run: mvn -B -ntp clean verify
+
+  assets-ts-ci:
+    name: Assets – Lint / Test / Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: assets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test -- --runInBand
+      - name: Build
+        run: npm run build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 2 – Cross-module integration tests
+# Runs the full multi-module Maven reactor after all individual builds pass.
+# ─────────────────────────────────────────────────────────────────────────────
+  integration-tests:
+    name: Cross-module Integration Tests
+    runs-on: ubuntu-latest
+    needs:
+      - auth-java-ci
+      - booking-java-ci
+      - room-java-ci
+      - branding-java-ci
+      - message-java-ci
+      - report-java-ci
+      - assets-ts-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+      - name: Run Maven verify for all Java services
+        run: mvn -B -ntp -pl auth,booking,room,report,branding,message verify
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE 3 – End-to-end tests
+#
+# Runs the Selenium-based end-to-end-tests project against a locally started
+# application stack.  The stack is started the same way run_locally.sh does:
+# each Spring Boot JAR is launched in the background and the Next.js dev server
+# handles the frontend on port 3003.
+#
+# Browser selection:
+#   • If SAUCE_USERNAME / SAUCE_ACCESS_KEY secrets are present the suite runs
+#     against Sauce Labs (BROWSER=remote).
+#   • Otherwise it falls back to headless Chrome via Xvfb (BROWSER=chrome).
+#
+# This job only runs on direct pushes to trunk (not on pull-requests from
+# forks that lack access to secrets / the full build artefacts).
+#
+# NOTE – Postman/Newman API smoke tests: the repository references a Postman
+# collection only via an external link in .utilities/wirebridge/README.md; no
+# maintained collection file is committed to the repo, so Newman is not wired
+# in here.  If a collection is added to the repo in future, a Newman step can
+# be inserted after the stack is started (step "Wait for services").
+# ─────────────────────────────────────────────────────────────────────────────
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
+    # Expose the Sauce Labs secret as an env var so we can branch on it in
+    # step-level `if:` conditions (secrets cannot be referenced there directly).
+    env:
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+
+      # Build all Java service JARs (skip unit tests – already run above).
+      - name: Build Java service JARs
+        run: mvn -B -ntp clean package -DskipTests -pl auth,booking,room,report,branding,message
+
+      # Install assets dependencies so the Next.js dev server can start.
+      - name: Install assets dependencies
+        working-directory: assets
+        run: npm ci
+
+      # Start all services in the background, mirroring run_locally.sh.
+      - name: Start application stack
+        run: |
+          java -jar -Dspring.profiles.active=dev auth/target/restful-booker-platform-auth-*.jar     > /tmp/auth.log     2>&1 &
+          java -jar -Dspring.profiles.active=dev booking/target/restful-booker-platform-booking-*.jar > /tmp/booking.log 2>&1 &
+          java -jar -Dspring.profiles.active=dev room/target/restful-booker-platform-room-*.jar     > /tmp/room.log     2>&1 &
+          java -jar -Dspring.profiles.active=dev report/target/restful-booker-platform-report-*.jar > /tmp/report.log   2>&1 &
+          java -jar -Dspring.profiles.active=dev branding/target/restful-booker-platform-branding-*.jar > /tmp/branding.log 2>&1 &
+          java -jar -Dspring.profiles.active=dev message/target/restful-booker-platform-message-*.jar  > /tmp/message.log  2>&1 &
+          cd assets && npm run dev > /tmp/assets.log 2>&1 &
+
+      # Poll each service port until it responds (or timeout after ~2 min).
+      - name: Wait for services to be ready
+        run: |
+          wait_for_port() {
+            local port=$1
+            local name=$2
+            echo "Waiting for $name on port $port..."
+            for i in $(seq 1 24); do
+              if curl -sf "http://localhost:$port" > /dev/null 2>&1; then
+                echo "$name is ready (port $port)"
+                return 0
+              fi
+              sleep 5
+            done
+            echo "ERROR: $name did not start in time (port $port)" >&2
+            return 1
+          }
+          wait_for_port 3004 auth
+          wait_for_port 3000 booking
+          wait_for_port 3001 room
+          wait_for_port 3005 report
+          wait_for_port 3002 branding
+          wait_for_port 3006 message
+          wait_for_port 3003 assets
+
+      # ── Option A: Sauce Labs (requires SAUCE_USERNAME + SAUCE_ACCESS_KEY) ──
+      # The app stack is already running locally; Sauce Labs provides the remote
+      # browser that connects back through a Sauce Connect tunnel.
+      # TARGET is not set here so TestSetup navigates to http://localhost:3003.
+      - name: Run E2E Tests (Sauce Labs)
+        if: env.SAUCE_USERNAME != ''
+        env:
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          BROWSER: remote
+        working-directory: end-to-end-tests
+        run: mvn -B -ntp clean test
+
+      # ── Option B: Headless Chrome via Xvfb (no secrets needed) ─────────────
+      - name: Start Xvfb (virtual display for headless Chrome)
+        if: env.SAUCE_USERNAME == ''
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1280x1024x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Run E2E Tests (local headless Chrome)
+        if: env.SAUCE_USERNAME == ''
+        env:
+          BROWSER: chrome
+        working-directory: end-to-end-tests
+        run: mvn -B -ntp clean test
+
+      # Always dump service logs so failures are diagnosable.
+      - name: Upload service logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-logs
+          path: /tmp/*.log
+          retention-days: 7
