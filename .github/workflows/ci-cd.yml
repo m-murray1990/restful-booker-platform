@@ -102,4 +102,11 @@ jobs:
             booking/target/surefire-reports
             booking/target/failsafe-reports
             room/target/surefire-reports
-            room/target/f
+            room/target/failsafe-reports
+            report/target/surefire-reports
+            report/target/failsafe-reports
+            branding/target/surefire-reports
+            branding/target/failsafe-reports
+            message/target/surefire-reports
+            message/target/failsafe-reports
+          if-no-files-found: ignore
