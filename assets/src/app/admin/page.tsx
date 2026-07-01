@@ -5,7 +5,10 @@ import Login from '@/components/admin/Login';
 import Cookies from 'universal-cookie';
 
 export default function AdminPage() {
-  const [isAuthenticated, setAuthenticate] = useState<boolean | null>(null);
+  const [isAuthenticated, setAuthenticate] = useState<boolean | null>(() => {
+    const token = new Cookies().get('token');
+    return token ? null : false;
+  });
   
   useEffect(() => {
     const cookies = new Cookies();
@@ -36,8 +39,6 @@ export default function AdminPage() {
       };
       
       validateToken();
-    } else {
-      setAuthenticate(false);
     }
   }, []);
   

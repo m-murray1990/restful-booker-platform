@@ -33,6 +33,19 @@ const AdminBooking: React.FC<AdminBookingProps> = ({ closeBooking, dates }) => {
   });
   const [errors, setErrors] = useState<string[]>([]);
 
+  async function fetchRooms() {
+    try {
+      const response = await fetch('/api/room');
+      if (response.ok) {
+        const data = await response.json();
+        setRooms(data.rooms);
+      }
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+      setErrors(['Failed to fetch rooms']);
+    }
+  }
+
   useEffect(() => {
     if (dates) {
       const newBooking = {
@@ -46,19 +59,6 @@ const AdminBooking: React.FC<AdminBookingProps> = ({ closeBooking, dates }) => {
       fetchRooms();
     }
   }, []);
-
-  const fetchRooms = async () => {
-    try {
-      const response = await fetch('/api/room');
-      if (response.ok) {
-        const data = await response.json();
-        setRooms(data.rooms);
-      }
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-      setErrors(['Failed to fetch rooms']);
-    }
-  };
 
   const updateState = (event: { name: string; value: string | boolean }) => {
     const value = event.name === 'depositpaid' ? event.value === 'true' : event.value;

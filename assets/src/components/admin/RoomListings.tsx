@@ -7,11 +7,7 @@ import { Room } from '@/types/room';
 const RoomListings: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
 
-  useEffect(() => {
-    updateRooms();
-  }, [])
-
-  const updateRooms = async () => {
+  async function updateRooms() {
     try {
       const response = await fetch('/api/room');
       if (response.ok) {
@@ -22,6 +18,10 @@ const RoomListings: React.FC = () => {
       console.error('Error fetching rooms:', error);
     }
   }
+
+  useEffect(() => {
+    updateRooms();
+  }, [])
 
   return(
     <div>

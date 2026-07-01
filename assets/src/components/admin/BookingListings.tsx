@@ -10,13 +10,7 @@ interface BookingListingsProps {
 const BookingListings: React.FC<BookingListingsProps> = ({ roomid, roomPrice }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
-  useEffect(() => {
-    if (roomid) {
-      getBookings();
-    }
-  }, [roomid]);
-
-  const getBookings = async () => {
+  async function getBookings() {
     try {
       const response = await fetch(`/api/booking/?roomid=${roomid}`);
       if (response.ok) {
@@ -26,7 +20,13 @@ const BookingListings: React.FC<BookingListingsProps> = ({ roomid, roomPrice }) 
     } catch (error) {
       console.error('Error fetching bookings:', error);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (roomid) {
+      getBookings();
+    }
+  }, [roomid]);
 
   return (
     <div>
