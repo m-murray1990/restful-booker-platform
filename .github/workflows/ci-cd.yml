@@ -62,6 +62,42 @@ jobs:
         working-directory: ./assets
         run: npm run build --if-present
 
+  api-tests:
+    name: API Tests (Postman/Newman)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start platform services
+        run: |
+          docker run -d --name booking -p 3000:3000 mwinteringham/restfulbookerplatform_booking:latest
+          docker run -d --name auth -p 3004:3004 mwinteringham/restfulbookerplatform_auth:latest
+          docker run -d --name room -p 3001:3001 mwinteringham/restfulbookerplatform_room:latest
+
+      - name: Wait for services to be ready
+        run: |
+          timeout 90 bash -c 'until curl -sf http://localhost:3000/booking/actuator/health; do echo "waiting for booking..."; sleep 3; done'
+          timeout 90 bash -c 'until curl -sf http://localhost:3004/auth/actuator/health; do echo "waiting for auth..."; sleep 3; done'
+          timeout 90 bash -c 'until curl -sf http://localhost:3001/room/actuator/health; do echo "waiting for room..."; sleep 3; done'
+
+      - name: Run API Tests
+        run: |
+          npx newman run postman/Restful-Booker.postman_collection.json \
+            --env-var host=http://localhost:3000 \
+            --env-var baseUrl=http://localhost:3000 \
+            --env-var authHost=http://localhost:3004 \
+            --env-var roomHost=http://localhost:3001 \
+            --reporters cli,junit \
+            --reporter-junit-export newman-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-results
+          path: newman-results.xml
+
   deploy-staging:
     name: Deploy to Staging
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
