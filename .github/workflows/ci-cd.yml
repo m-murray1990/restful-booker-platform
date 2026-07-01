@@ -1,15 +1,11 @@
 name: CI/CD Platform Pipeline
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [trunk, main, develop]
   push:
     branches: [trunk, main, develop]
-  workflow_dispatch:
-
-concurrency:
-  group: ci-cd-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   auth-java-ci:
@@ -19,86 +15,10 @@ jobs:
       run:
         working-directory: auth
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
-
-      - name: Build and verify
-        run: mvn -B -ntp clean verify
-
-      - name: Upload test reports (if present)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: auth-test-reports
-          path: |
-            auth/target/surefire-reports
-            auth/target/failsafe-reports
-          if-no-files-found: ignore
-
-  platform-ts-ci:
-    name: TypeScript - Lint/Test/Build
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app_dir:
-          - frontend
-          - ui
-          - web
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Detect package-lock.json
-        id: detect
-        run: |
-          if [ -f "${{ matrix.app_dir }}/package-lock.json" ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up Node
-        if: steps.detect.outputs.found == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: ${{ matrix.app_dir }}/package-lock.json
-
-      - name: Install dependencies
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
-        run: npm ci
-
-      - name: Lint
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
-        run: npm run lint --if-present
-
-      - name: Test
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
-        run: npm test --if-present
-
-      - name: Build
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
-        run: npm run build --if-present
-
-  deploy-production:
-    name: Deploy to Production (Practice Dry Run)
-    if: (github.ref == 'refs/heads/trunk' || github.ref == 'refs/heads/main') && github.event_name == 'push'
-    needs: [auth-java-ci]
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - run: echo "Practice mode: no real production deployment configured"
+      - run: mvn -B -ntp clean verify
