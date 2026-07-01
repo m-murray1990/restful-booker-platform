@@ -1,52 +1,26 @@
 package pageobjects;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.How;
-import org.w3c.dom.html.HTMLInputElement;
+import com.microsoft.playwright.Page;
 
 public class NavPage extends BasePage {
 
-    @FindBy(how = How.CSS, using  =".navbar-brand")
-    private WebElement divNavBar;
-
-    @FindBy(how = How.ID, using = "search")
-    private WebElement inputSearchTerm;
-
-    @FindBy(how = How.ID, using = "reportLink")
-    private WebElement aReportLink;
-
-    @FindBy(how = How.ID, using = "brandingLink")
-    private WebElement aBranding;
-
-    @FindBy(how = How.CSS, using = ".badge")
-    private WebElement aNotification;
-
-    @FindBy(how = How.ID, using = "frontPageLink")
-    private WebElement aFrontPage;
-
-    public NavPage(WebDriver driver) {
-        super(driver);
-    }
-
-    public WebElement getDivNavBar() {
-        return divNavBar;
+    public NavPage(Page page) {
+        super(page);
     }
 
     public void clickReport() {
-        aReportLink.click();
+        page.click("#reportLink");
     }
 
     public void clickBranding() {
-        aBranding.click();
+        page.click("#brandingLink");
     }
 
     public void clickNotification() {
-        aNotification.click();
+        page.click(".badge");
     }
 
     public void clickFrontPage() {
-        aFrontPage.click();
+        page.click("#frontPageLink");
     }
 }

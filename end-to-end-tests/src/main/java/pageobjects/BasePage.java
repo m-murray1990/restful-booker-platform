@@ -1,15 +1,12 @@
 package pageobjects;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.support.PageFactory;
+import com.microsoft.playwright.Page;
 
-public class BasePage
-{
-    protected WebDriver driver;
+public class BasePage {
 
-    public BasePage(WebDriver driver)
-    {
-        this.driver = driver;
-        PageFactory.initElements(this.driver, this);
+    protected Page page;
+
+    public BasePage(Page page) {
+        this.page = page;
     }
 }

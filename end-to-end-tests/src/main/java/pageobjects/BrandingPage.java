@@ -1,21 +1,15 @@
 package pageobjects;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.How;
+import com.microsoft.playwright.Page;
 
 public class BrandingPage extends BasePage {
 
-    @FindBy(how = How.ID, using = "name")
-    private WebElement inpName;
-
-    public BrandingPage(WebDriver driver) {
-        super(driver);
+    public BrandingPage(Page page) {
+        super(page);
     }
 
-    public String getNameValue() throws InterruptedException {
-        Thread.sleep(2000);
-        return inpName.getAttribute("value");
+    public String getNameValue() {
+        page.waitForSelector("#name");
+        return page.inputValue("#name");
     }
 }

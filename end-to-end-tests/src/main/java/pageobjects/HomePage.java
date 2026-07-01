@@ -1,48 +1,56 @@
 package pageobjects;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.How;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
-
-import java.time.Duration;
-import java.util.List;
+import com.microsoft.playwright.Page;
 
 public class HomePage extends BasePage {
 
-    @FindBy(how = How.CSS, using = ".room-card a")
-    private List<WebElement> btnReserveRoom;
-
-    @FindBy(how = How.CSS, using = ".btn-outline-primary.book-room")
-    private WebElement btnSubmitBooking;
-
-    @FindBy(how = How.CSS, using = ".alert-danger")
-    private WebElement divAlert;
-
-    @FindBy(how = How.CSS, using = ".display-5")
-    private List<WebElement> divSubHeaders;
-
-    public HomePage(WebDriver driver) {
-        super(driver);
+    public HomePage(Page page) {
+        super(page);
     }
 
-    public void clickOpenBookingForm() throws InterruptedException {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", divSubHeaders.get(0));
-        Thread.sleep(500);
-
-        btnReserveRoom.get(0).click();
+    public void clickOpenBookingForm() {
+        page.locator(".display-5").first().scrollIntoViewIfNeeded();
+        page.locator(".room-card a").first().click();
     }
 
     public void clickSubmitBooking() {
-        btnSubmitBooking.click();
+        page.click(".btn-outline-primary.book-room");
     }
 
-
     public Boolean bookingFormErrorsExist() {
-        return divAlert.isDisplayed();
+        return page.locator(".alert-danger").isVisible();
+    }
+
+    public Boolean availabilitySectionExists() {
+        return page.locator("#booking").isVisible();
+    }
+
+    public Boolean checkInDatePickerExists() {
+        return page.locator("label:has-text('Check In')").isVisible();
+    }
+
+    public Boolean checkOutDatePickerExists() {
+        return page.locator("label:has-text('Check Out')").isVisible();
+    }
+
+    public void setCheckInDate(String date) {
+        page.locator(".dateWrapper input").first().fill(date);
+    }
+
+    public void setCheckOutDate(String date) {
+        page.locator(".dateWrapper input").last().fill(date);
+    }
+
+    public void clickCheckAvailability() {
+        page.locator("button:has-text('Check Availability')").click();
+    }
+
+    public int availableRoomCount() {
+        page.locator("#rooms .room-card").first().waitFor();
+        return page.locator("#rooms .room-card").count();
+    }
+
+    public String getFirstRoomBookNowLink() {
+        return page.locator("#rooms .room-card a.btn").first().getAttribute("href");
     }
 }

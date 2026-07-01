@@ -1,21 +1,14 @@
 package pageobjects;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.How;
+import com.microsoft.playwright.Page;
 
 public class ReservationPage extends BasePage {
 
-    @FindBy(how = How.CSS, using = "#doReservation")
-    private WebElement btnOpenBooking;
-
-    public ReservationPage(WebDriver driver) {
-        super(driver);
+    public ReservationPage(Page page) {
+        super(page);
     }
 
     public Boolean bookingFormExists() {
-        return btnOpenBooking.isDisplayed();
+        return page.locator("#doReservation").isVisible();
     }
-
 }

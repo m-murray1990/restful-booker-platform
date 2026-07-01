@@ -1,41 +1,37 @@
-import driverfactory.DriverFactory;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.Cookie;
+import driverfactory.PlaywrightFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.openqa.selenium.Cookie;
-import org.openqa.selenium.WebDriver;
 
-import java.time.Duration;
-import java.time.temporal.TemporalUnit;
-import java.util.concurrent.TimeUnit;
-
-import static java.time.temporal.ChronoUnit.SECONDS;
+import java.util.List;
 
 public class TestSetup {
 
-    WebDriver driver;
+    Page page;
 
     @BeforeEach
-    public void SetUp(){
-        driver = new DriverFactory().create();
-        driver.manage().timeouts().implicitlyWait(Duration.of(2, SECONDS));
+    public void SetUp() {
+        page = PlaywrightFactory.createPage();
     }
 
     @AfterEach
-    public void TearDown(){
-        driver.quit();
+    public void TearDown() {
+        PlaywrightFactory.closePage(page);
+        PlaywrightFactory.closePlaywright();
     }
 
-    void navigateToApplication(){
-        if(System.getenv("TARGET") != null && System.getenv("TARGET").equals("production")){
-            // We load the production page up initially to gain access to the site before
-            // adding in the cookie to disabled the welcome popup. We finally have to refresh
-            // the page to ensure the cookie is read and the popup is disabled.
-            driver.navigate().to("https://automationintesting.online/admin");
-            driver.manage().addCookie(new Cookie("welcome", "true"));
-            driver.navigate().refresh();
+    void navigateToApplication() {
+        if (System.getenv("TARGET") != null && System.getenv("TARGET").equals("production")) {
+            page.navigate("https://automationintesting.online/admin");
+            page.context().addCookies(List.of(
+                new Cookie("welcome", "true").setUrl("https://automationintesting.online")
+            ));
+            page.reload();
         } else {
-            driver.navigate().to("http://localhost:3003/admin");
+            page.navigate("http://localhost:3003/admin");
         }
     }
+}
 
 }

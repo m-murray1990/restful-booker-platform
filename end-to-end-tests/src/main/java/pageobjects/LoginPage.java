@@ -1,42 +1,25 @@
 package pageobjects;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.How;
+import com.microsoft.playwright.Page;
 
-public class LoginPage extends BasePage
-{
-    @FindBy(how = How.ID, using ="username")
-    private WebElement txtUsername;
+public class LoginPage extends BasePage {
 
-    @FindBy(how = How.ID, using ="password")
-    private WebElement txtPassword;
-
-    @FindBy(how = How.ID, using ="doLogin")
-    private WebElement btnLogin;
-
-    public LoginPage(WebDriver driver)
-    {
-        super(driver);
+    public LoginPage(Page page) {
+        super(page);
     }
 
-    public LoginPage populateUsername(String username)
-    {
-        txtUsername.sendKeys(username);
+    public LoginPage populateUsername(String username) {
+        page.fill("#username", username);
         return this;
     }
 
-    public LoginPage populatePassword(String password)
-    {
-        txtPassword.sendKeys(password);
+    public LoginPage populatePassword(String password) {
+        page.fill("#password", password);
         return this;
     }
 
-    public RoomListingPage clickLogin()
-    {
-        btnLogin.click();
-        return new RoomListingPage(driver);
+    public RoomListingPage clickLogin() {
+        page.click("#doLogin");
+        return new RoomListingPage(page);
     }
-
 }

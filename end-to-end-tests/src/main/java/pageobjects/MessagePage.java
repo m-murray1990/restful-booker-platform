@@ -1,23 +1,17 @@
 package pageobjects;
 
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.How;
-import pageobjects.BasePage;
+import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
 
 import java.util.List;
 
 public class MessagePage extends BasePage {
 
-    @FindBy(how = How.CSS, using = ".roomDelete")
-    List<WebElement> aRoomDelete;
-
-    public MessagePage(WebDriver driver) {
-        super(driver);
+    public MessagePage(Page page) {
+        super(page);
     }
 
-    public List<WebElement> getMessages() {
-        return aRoomDelete;
+    public List<Locator> getMessages() {
+        return page.locator(".roomDelete").all();
     }
 }
