@@ -42,86 +42,105 @@ jobs:
             auth/target/failsafe-reports
           if-no-files-found: ignore
 
-  platform-ts-ci:
-    name: TypeScript - Lint/Test/Build
+  assets-ts-ci:
+    name: Assets - Lint/Test/Build
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app_dir:
-          - frontend
-          - ui
-          - web
+    defaults:
+      run:
+        working-directory: assets
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect package-lock.json
-        id: detect
-        run: |
-          if [ -f "${{ matrix.app_dir }}/package-lock.json" ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Set up Node
-        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: ${{ matrix.app_dir }}/package-lock.json
+          cache-dependency-path: assets/package-lock.json
 
       - name: Install dependencies
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
         run: npm ci
 
       - name: Lint
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
         run: npm run lint --if-present
 
       - name: Test
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
-        run: npm test --if-present
+        run: npm test --if-present -- --runInBand
 
       - name: Build
-        if: steps.detect.outputs.found == 'true'
-        working-directory: ${{ matrix.app_dir }}
         run: npm run build --if-present
 
   integration-tests:
-    name: Integration Test Gate
+    name: Cross-module Integration Tests
     runs-on: ubuntu-latest
     needs:
       - auth-java-ci
-      - platform-ts-ci
+      - assets-ts-ci
     steps:
-      - name: Confirm upstream CI completed
-        run: echo "Auth and TypeScript checks passed. Ready for integration tests."
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run Maven verify for core services
+        run: mvn -B -ntp -pl auth,booking,room,report,branding,message verify
+
+      - name: Upload integration reports (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-reports
+          path: |
+            auth/target/surefire-reports
+            auth/target/failsafe-reports
+            booking/target/surefire-reports
+            booking/target/failsafe-reports
+            room/target/surefire-reports
+            room/target/failsafe-reports
+            report/target/surefire-reports
+            report/target/failsafe-reports
+            branding/target/surefire-reports
+            branding/target/failsafe-reports
+            message/target/surefire-reports
+            message/target/failsafe-reports
+          if-no-files-found: ignore
 
   deploy-production:
     name: Deploy to Production (Practice Dry Run)
-    if: (github.ref == 'refs/heads/trunk' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
     needs:
       - auth-java-ci
-      - platform-ts-ci
+      - assets-ts-ci
       - integration-tests
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "Practice mode: no real production deployment configured"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Practice deployment
+        run: echo "Practice mode: no real production deployment configured"
 
   smoke-tests:
-    name: Post-deploy Smoke Test Gate
-    if: (github.ref == 'refs/heads/trunk' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    name: Post-deploy Smoke Tests
+    if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
     needs:
       - deploy-production
     runs-on: ubuntu-latest
     steps:
-      - name: Smoke test placeholder
-        run: echo "Add health check / smoke tests here after deployment."
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run production smoke monitor
+        run: node .utilities/monitor/prod_monitor.js
