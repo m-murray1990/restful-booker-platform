@@ -111,6 +111,43 @@ jobs:
             message/target/failsafe-reports
           if-no-files-found: ignore
 
+  e2e-tests:
+    name: E2E Tests on Sauce Labs
+    if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
+    needs:
+      - auth-java-ci
+      - assets-ts-ci
+      - integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run E2E Tests on Sauce Labs
+        env:
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          BROWSER: remote
+          TARGET: staging
+        run: |
+          cd end-to-end-tests
+          mvn -B -ntp clean test
+
+      - name: Upload E2E Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: end-to-end-tests/target/surefire-reports
+          if-no-files-found: ignore
+
   deploy-production:
     name: Deploy to Production (Practice Dry Run)
     if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
@@ -118,6 +155,7 @@ jobs:
       - auth-java-ci
       - assets-ts-ci
       - integration-tests
+      - e2e-tests
     runs-on: ubuntu-latest
     environment: production
     steps:
