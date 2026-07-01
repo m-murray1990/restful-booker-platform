@@ -111,13 +111,27 @@ jobs:
             message/target/failsafe-reports
           if-no-files-found: ignore
 
-  e2e-tests:
-    name: E2E Tests on Sauce Labs
+  deploy-staging:
+    name: Deploy to Staging
     if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
     needs:
       - auth-java-ci
       - assets-ts-ci
       - integration-tests
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Practice staging deployment
+        run: echo "Practice mode: no real staging deployment configured"
+
+  e2e-tests:
+    name: E2E Tests on Sauce Labs
+    if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
+    needs:
+      - deploy-staging
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -152,9 +166,6 @@ jobs:
     name: Deploy to Production (Practice Dry Run)
     if: github.ref == 'refs/heads/trunk' && github.event_name == 'push'
     needs:
-      - auth-java-ci
-      - assets-ts-ci
-      - integration-tests
       - e2e-tests
     runs-on: ubuntu-latest
     environment: production
