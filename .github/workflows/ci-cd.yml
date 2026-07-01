@@ -1,0 +1,85 @@
+name: CI/CD Platform Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auth-java-ci:
+    name: Auth Service (Java) - Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and verify
+        run: mvn -B -ntp clean package -DskipTests
+
+  platform-ts-ci:
+    name: TypeScript - Lint/Test/Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./assets
+        run: npm ci
+
+      - name: Lint
+        working-directory: ./assets
+        run: npm run lint --if-present
+
+      - name: Test
+        working-directory: ./assets
+        run: npm test --if-present
+
+      - name: Build
+        working-directory: ./assets
+        run: npm run build --if-present
+
+  deploy-staging:
+    name: Deploy to Staging
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    needs: [auth-java-ci, platform-ts-ci]
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy staging
+        run: echo "Add staging deploy script/command here"
+
+  deploy-production:
+    name: Deploy to Production
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [auth-java-ci, platform-ts-ci]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy production
+        run: echo "Add production deploy script/command here"
