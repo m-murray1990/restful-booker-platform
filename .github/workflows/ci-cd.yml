@@ -64,6 +64,7 @@ jobs:
 
   api-tests:
     name: API Tests (Postman/Newman)
+    needs: [auth-java-ci, platform-ts-ci]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
