@@ -12,6 +12,18 @@ const MessageList: React.FC = () => {
   const [messageId, setMessageId] = useState<number>(0);
   const [messages, setMessages] = useState<MessageProps[]>([]);
 
+  async function refreshMessageList() {
+    try {
+      const response = await fetch('/api/message');
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.messages || []);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  }
+
   useEffect(() => {
     refreshMessageList();
   }, []);
@@ -30,18 +42,6 @@ const MessageList: React.FC = () => {
       }
     } catch (error) {
       console.error('Error deleting message:', error);
-    }
-  };
-
-  const refreshMessageList = async () => {
-    try {
-      const response = await fetch('/api/message');
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.messages || []);
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
     }
   };
 

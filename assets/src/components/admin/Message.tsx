@@ -20,6 +20,24 @@ interface MessageDetails {
 const Message: React.FC<MessageProps> = ({ messageId, closeMessage, refreshMessageList }) => {
   const [message, setMessage] = useState<MessageDetails | null>(null);
 
+  async function markAsRead() {
+    try {
+      const response = await fetch(`/api/message/${messageId}/read`, {
+        method: 'PUT',
+      });
+      
+      if (response.ok) {
+        // Update the message list and count
+        refreshMessageList();
+        if (typeof window !== 'undefined' && (window as any).updateMessageCount) {
+          (window as any).updateMessageCount();
+        }
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  }
+
   useEffect(() => {
     const fetchMessage = async () => {
       try {
@@ -40,24 +58,6 @@ const Message: React.FC<MessageProps> = ({ messageId, closeMessage, refreshMessa
 
     fetchMessage();
   }, [messageId]);
-
-  const markAsRead = async () => {
-    try {
-      const response = await fetch(`/api/message/${messageId}/read`, {
-        method: 'PUT',
-      });
-      
-      if (response.ok) {
-        // Update the message list and count
-        refreshMessageList();
-        if (typeof window !== 'undefined' && (window as any).updateMessageCount) {
-          (window as any).updateMessageCount();
-        }
-      }
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
-  };
 
   if (!message) {
     return <div></div>;

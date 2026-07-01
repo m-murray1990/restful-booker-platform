@@ -40,6 +40,30 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ id }) => {
   });
   const [errors, setErrors] = useState<string[]>([]);
 
+  async function fetchRoomDetails() {
+    try {
+      const response = await fetch(`/api/room/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Convert features array to object
+        const featuresObject = {
+          WiFi: false,
+          TV: false,
+          Radio: false,
+          Refreshments: false,
+          Safe: false,
+          Views: false
+        };
+        data.features?.forEach((feature: string) => {
+          featuresObject[feature as keyof typeof featuresObject] = true;
+        });
+        setRoom({ ...data, featuresObject });
+      }
+    } catch (error) {
+      console.error('Error fetching room details:', error);
+    }
+  }
+
   useEffect(() => {
     fetchRoomDetails();
   }, [id]);
@@ -94,30 +118,6 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ id }) => {
       features: []
     });
     setErrors([]);
-  };
-
-  const fetchRoomDetails = async () => {
-    try {
-      const response = await fetch(`/api/room/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Convert features array to object
-        const featuresObject = {
-          WiFi: false,
-          TV: false,
-          Radio: false,
-          Refreshments: false,
-          Safe: false,
-          Views: false
-        };
-        data.features?.forEach((feature: string) => {
-          featuresObject[feature as keyof typeof featuresObject] = true;
-        });
-        setRoom({ ...data, featuresObject });
-      }
-    } catch (error) {
-      console.error('Error fetching room details:', error);
-    }
   };
 
   const updateState = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

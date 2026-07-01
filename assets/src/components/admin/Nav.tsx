@@ -113,7 +113,7 @@ const Nav: React.FC<NavProps> = ({ setAuthenticate, isAuthenticated }) => {
           </ul>
           <ul className="navbar-nav ms-auto">
             <li className="nav-item">
-              <a className="nav-link" id="frontPageLink" href="/">Front Page</a>
+              <Link className="nav-link" id="frontPageLink" href="/">Front Page</Link>
             </li>
             <li className="nav-item">
               <button onClick={doLogout} className="btn btn-outline-danger my-2 my-sm-0">

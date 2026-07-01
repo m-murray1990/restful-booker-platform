@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
@@ -164,7 +165,7 @@ const BookingForm: React.FC<RoomDetailsProps> = ({ room }) => {
                         <h2 className="card-title fs-4 fw-bold mb-3">Booking Confirmed</h2>
                         <p>Your booking has been confirmed for the following dates:</p>
                         <p className="text-center pt-2"><strong>{bookingDetails?.bookingdates.checkin} - {bookingDetails?.bookingdates.checkout}</strong></p>
-                        <a type="button" className="btn btn-primary w-100 mb-3 mt-3" href='/'>Return home</a>
+                        <Link className="btn btn-primary w-100 mb-3 mt-3" href='/'>Return home</Link>
                     </div>
                 </div>
             </div>
