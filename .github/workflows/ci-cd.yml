@@ -16,7 +16,8 @@ concurrency:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STAGE 1 – Service builds (run in parallel)
-# Each Java service targets release 25/26, so we use Java 26 throughout.
+# Java 26 is used throughout to match the compiler release targets declared in
+# each service pom.xml (auth=26, others=25) and the per-service build workflows.
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
 
@@ -255,12 +256,14 @@ jobs:
           wait_for_port 3003 assets
 
       # ── Option A: Sauce Labs (requires SAUCE_USERNAME + SAUCE_ACCESS_KEY) ──
+      # The app stack is already running locally; Sauce Labs provides the remote
+      # browser that connects back through a Sauce Connect tunnel.
+      # TARGET is not set here so TestSetup navigates to http://localhost:3003.
       - name: Run E2E Tests (Sauce Labs)
         if: env.SAUCE_USERNAME != ''
         env:
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
           BROWSER: remote
-          TARGET: staging
         working-directory: end-to-end-tests
         run: mvn -B -ntp clean test
 
