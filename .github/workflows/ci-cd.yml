@@ -63,13 +63,13 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint --if-present
+        run: npm run lint
 
       - name: Test
-        run: npm test --if-present -- --runInBand
+        run: npm test -- --runInBand
 
       - name: Build
-        run: npm run build --if-present
+        run: npm run build
 
   integration-tests:
     name: Cross-module Integration Tests
